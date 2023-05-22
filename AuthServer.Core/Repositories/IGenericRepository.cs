@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -17,6 +18,8 @@ namespace AuthServer.Core.Repositories
         Task AddAsync(TEntity entity);
         void Remove(TEntity entity);
         TEntity Update(TEntity entity);
+
+        
 
     }
 }
