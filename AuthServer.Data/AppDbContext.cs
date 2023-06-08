@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AuthServer.Data
 {
-    //Idnetity üyelik tablolar
+    //Identity üyelik tablolar
     //tabloları aynı dbContext içinde tutmak istiyoruz.üyelikle ilgili işlemleri ayrı bir Dbcontextde,Product ve RefreshToken ayrı DbContextde iki ayrı veri tabanı açılacak.Performans açısından iyi bir durum değil
     //eğer üyelik sistemi dışında çokfazla tablo yoksa aynı dbContexte toplayabiliriz
     //Bu yüzden AppDbContext DbContextden inheritance almayıp (üyelikle ilgili bir context olacağı için) identity DbContext'den miras alınacak

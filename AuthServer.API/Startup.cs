@@ -1,16 +1,31 @@
+using AuthServer.Core.Configuration;
+using AuthServer.Core.Models;
+using AuthServer.Core.Repositories;
+using AuthServer.Core.Services;
+using AuthServer.Core.UnitOfWork;
+using AuthServer.Data;
+using AuthServer.Data.Repositories;
+using AuthServer.Service.Services;
+using SharedLibrary.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using SharedLibrary.Configurations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentValidation.AspNetCore;
+using SharedLibrary.Extensions;
 
 namespace AuthServer.API
 {
@@ -26,8 +41,76 @@ namespace AuthServer.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            //DI Register
+           
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped(typeof(IGenericRepository<>),typeof(GenericRepository<>));
+            services.AddScoped(typeof(IServiceGeneric<,>), typeof(ServiceGeneric<,>));
+            services.AddScoped<IUnitOfWork,UnitOfWork>();
 
-            services.AddControllers();
+
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseSqlServer(Configuration.GetConnectionString("SqlServer"), sqlOptions =>
+                {
+                    //belirttiðimiz AppDbContext data katmanýnda
+                    //burada migration iþlemleri data katmanýnda oluyor.
+                    //MigrationAssembly içerisine tam olarak data katmanýna verdiðim ismi yazman gerekli
+                    sqlOptions.MigrationsAssembly("AuthServer.Data");
+
+                });
+
+            });
+
+            services.AddIdentity<UserApp, IdentityRole>(Opt =>
+            {
+                Opt.User.RequireUniqueEmail = true;
+                Opt.Password.RequireNonAlphanumeric = false;
+
+            }).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+
+            services.Configure<CustomTokenOption>(Configuration.GetSection("TokenOptions"));
+          
+
+            services.Configure<List<Client>>(Configuration.GetSection("Clients"));
+
+            services.AddAuthentication(options =>
+            {
+                //
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme= JwtBearerDefaults.AuthenticationScheme; 
+            }).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,opts=>
+            {
+                var tokenOptions = Configuration.GetSection("TokenOptions").Get<CustomTokenOption>();
+                opts.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                {
+                    //neylerle doðrulayacaðýmýz kýsým
+                    ValidIssuer = tokenOptions.Issuer,
+                    ValidAudience = tokenOptions.Audience[0],//audience de ilk index ýssuerin kendisi
+                    IssuerSigningKey = SignService.GetSymmetricSecurityKey(tokenOptions.SecurityKey),
+
+                    //alttaki deðerler nelerin doðrulanacaðýný bildirdiðimiz kýsým(kontrol etmek istediðimiz kýsýmlar)
+                    ValidateIssuerSigningKey = true,//üretilecek token deðerinin uygulamamýza ait bir deðer olduðunu ifade eden security key verisinin doðrulanmasýdýr.
+                    ValidateAudience = true,//oluþturulacak token deðerlerini kimlerin hangi origin/sitelerin kullanacaðýný belirlediðimiz kýsým.
+                    ValidateIssuer = true,//oluþturulacak token deðerini kimin daðýttýðýný ifade edeceðimiz alandýr.
+                    ValidateLifetime = true,//oluþturulan token deðerinin süresini kontrol edecek olan doðrulamadýr.
+                    ClockSkew = TimeSpan.Zero,
+
+                    //ValidIssuer = Configuration["TokenOptions:Issuer"]---- >>>> yapýsý halinde de kullanabilirdik(tokenOptions nesnesi üretmeseydik)
+
+
+                };
+
+            });
+         
+
+            services.AddControllers().AddFluentValidation(options =>
+            {
+                options.RegisterValidatorsFromAssemblyContaining<Startup>();
+            });
+            services.UseCustomValidationResponse();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthServer.API", Version = "v1" });
@@ -43,10 +126,14 @@ namespace AuthServer.API
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "AuthServer.API v1"));
             }
+           
 
+            app.UseCustomException();
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 

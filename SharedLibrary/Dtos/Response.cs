@@ -23,7 +23,7 @@ namespace SharedLibrary.Dtos
             return new Response<T> { Data = data, StatusCode = statusCode,IsSuccessful=true };
         }
 
-        public static Response<T> Success(int statusCode) //genellike ürünü update yaptığımızda tekrardan data dönmemize gerek yok.O yüzden data:default değerinde
+        public static Response<T> Success(int statusCode) //genellikle ürünü update yaptığımızda tekrardan data dönmemize gerek yok.O yüzden data:default değerinde
         {
             return new Response<T> { Data=default, StatusCode = statusCode,IsSuccessful = true };
         }

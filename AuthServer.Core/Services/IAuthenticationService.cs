@@ -22,7 +22,7 @@ namespace AuthServer.Core.Services
         //log-out yaptığımızda refresh tokeni null'a set etmek için
         Task<Response<NoDataDto>> RevokeRefreshToken(string refreshToken);
 
-        Task<Response<ClientLoginDto>> CreateTokenByClient(ClientLoginDto clientloginDto);
+        Response<ClientTokenDto> CreateTokenByClient(ClientLoginDto clientloginDto);
 
     }
 }

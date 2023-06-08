@@ -14,7 +14,7 @@ namespace AuthServer.Data.Repositories
 
         private readonly DbContext _context;
         private readonly DbSet<TEntity> _dbSet;
-
+       
         public GenericRepository(AppDbContext context)
         {
             _context = context;
@@ -24,7 +24,7 @@ namespace AuthServer.Data.Repositories
         {
             await _dbSet.AddAsync(entity);
             //savechanges yapılana kadar burada yaptığımız herşey memory de tutulacak
-
+            
         }
 
         public async Task<IEnumerable<TEntity>> GetAllAsync()
@@ -40,7 +40,8 @@ namespace AuthServer.Data.Repositories
             {
                 _context.Entry(entity).State = EntityState.Detached;
             }
-            return entity;
+            return entity;//entity boş veya veritabanında varsa her iki türlü de döner
+
         }
 
         public void Remove(TEntity entity)
